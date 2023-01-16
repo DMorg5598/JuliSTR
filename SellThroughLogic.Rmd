@@ -1,0 +1,108 @@
+---
+title: "Sell Through Logic"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(reticulate)
+py_install('pandas')
+```
+
+```{r}
+read.csv('catalog.csv')
+read.csv('vendorsales.csv')
+```
+
+```{python}
+import pandas as pd
+
+catalog = pd.DataFrame(r.catalog)
+vendorsales = pd.DataFrame(r.vendorsales)
+
+catalogdfA = catalog.query('SKU >= 500000')
+vendorsalesdfA = vendorsales.query('SKU >= 500000')
+catalogdf = catalogdfA.query('SKU < 600000')
+vendorsalesdf = vendorsalesdfA.query('SKU < 600000')
+
+#sort by SKU
+
+catalogdf2 = catalogdf.sort_values('SKU')
+
+vendorsalesdf2 = vendorsalesdf.sort_values('SKU')
+salescodes = []
+salescodes.extend(vendorsalesdf2.get('SKU'))
+
+vendorname = []
+vendorname.extend(vendorsalesdf2.get('Vendor Name'))
+salestype = []
+salestype.extend(vendorsalesdf2.get('Item Variation'))
+salesnames = []
+salesnames.extend(vendorsalesdf2.get('Item Name'))
+salescounts = []
+salescounts.extend(vendorsalesdf2.get('Units Sold'))
+
+i = 0
+j = 1
+while i < len(salesnames):
+  if salestype[i] == salestype[j]:
+    salesnames.pop(j)
+    salescounts[i] += salescounts[j]
+    vendorname.pop(j)
+    salestype.pop(j)
+    salescodes.pop(j)
+    salescounts.pop(j)
+  i += 1
+  j += 1
+
+
+data = {
+  'sku':salescodes,
+  'item name':salesnames,
+  'item type':salestype,
+  'sales count':salescounts
+}
+
+cleansales = pd.DataFrame(data)
+
+catafilt = catalogdf2.isin(salescodes)
+
+catafilt2 = catafilt.query('SKU != True')
+
+indexlist = catafilt2.index
+catalogdf3 = catalogdf2.drop(indexlist, axis='index')
+
+
+inventcodes = []
+inventcodes.extend(catalogdf3.get('SKU'))
+inventcounts = []
+inventcounts.extend(catalogdf3.get('Current Quantity Julius Clothing Inc.'))
+
+
+i = 0
+j = 1
+while i < len(inventcodes):
+  if inventcodes[i] == inventcodes[j]:
+    inventcodes.pop(j)
+    inventcounts[i] += inventcounts[j]
+    inventcounts.pop(j)
+  i += 1
+  j += 1
+
+data = {
+  'sku':salescodes,
+  'item name':salesnames,
+  'item type':salestype,
+  'sales count':salescounts,
+  'invent count':inventcounts
+}
+
+sellthroughdf1 = pd.DataFrame(data)
+
+sellthrudf2 = sellthroughdf1.sort_values(by = ['item vendor', 'item class'], ascending=True)
+
+```
+
